@@ -1,8 +1,7 @@
 streamlit
 pandas
 pymysql
-psycopg2
-sqlite3
+psycopg2-binary
 cx_Oracle
 pyodbc
 pillow
