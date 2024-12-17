@@ -1,0 +1,8 @@
+streamlit
+pandas
+pymysql
+psycopg2
+sqlite3
+cx_Oracle
+pyodbc
+pillow
