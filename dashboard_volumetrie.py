@@ -28,31 +28,33 @@ def connect_to_db(db_type, host, user, password, database):
         st.error(f"Erreur de connexion à la base de données: {str(e)}")
         return None
 
-# Fonction pour traiter un fichier CSV ou Excel en morceaux
-def process_large_file(uploaded_file, chunk_size=100000):
+# Fonction pour traiter un fichier CSV ou Excel
+def process_file(uploaded_file):
+    # Lire le fichier selon son type (CSV ou Excel)
     try:
-        # Lire le fichier en morceaux
         if uploaded_file.name.endswith('.csv'):
-            chunks = pd.read_csv(uploaded_file, chunksize=chunk_size)
+            df = pd.read_csv(uploaded_file)
         elif uploaded_file.name.endswith('.xlsx'):
-            chunks = pd.read_excel(uploaded_file, chunksize=chunk_size)
+            df = pd.read_excel(uploaded_file)
         else:
             st.error("Type de fichier non supporté. Veuillez télécharger un fichier CSV ou Excel.")
             return None
         
-        # Afficher les morceaux et leur taille
-        for chunk in chunks:
-            total_size = chunk.memory_usage(deep=True).sum() / 1024 / 1024  # Taille en Mo
-            st.write(f"Taille du morceau: {total_size:.2f} MB")
-            st.dataframe(chunk.head())  # Afficher un aperçu du morceau
+        # Afficher les 5 premières lignes du fichier pour l'inspection
+        st.write(f"Contenu du fichier {uploaded_file.name}:")
+        st.dataframe(df.head())
         
-        return chunks  # Retourner les morceaux traités
+        # Calculer la volumétrie des données
+        total_size = df.memory_usage(deep=True).sum() / 1024 / 1024  # Taille en Mo
+        st.write(f"Taille totale du fichier: {total_size:.2f} MB")
+        
+        return df
 
     except Exception as e:
         st.error(f"Erreur lors du traitement du fichier: {str(e)}")
         return None
 
-# Si vous voulez définir une taille spécifique pour l'image (par exemple 200px de largeur)
+# Afficher le logo au début du dashboard
 st.sidebar.image("assets/logo_orange.png", width=200)
 
 # Interface utilisateur pour saisir les informations de la base de données
@@ -63,12 +65,11 @@ data_source = st.radio("Choisissez la source des données", ('Base de données',
 
 if data_source == 'Base de données':
     # Entrée des informations de connexion
-    st.subheader("Connexion à la Base de Données")
     db_type = st.selectbox("Choisissez le type de base de données", ['MySQL', 'PostgreSQL', 'SQLite', 'Oracle', 'SQL Server'])
     host = st.text_input("Hôte de la base de données", "localhost")
-    user = st.text_input("Utilisateur de la base de données", "root")
-    password = st.text_input("Mot de passe de la base de données", "12345678", type="password")
-    database = st.text_input("Nom de la base de données", "ADMIN")
+    user = st.text_input("Utilisateur de la base de données", "ousmane")
+    password = st.text_input("Mot de passe de la base de données", "savougne1904", type="password")
+    database = st.text_input("Nom de la base de données", "tableaudebord_backend")
 
     if st.button("Obtenir la volumétrie"):
         connection = connect_to_db(db_type, host, user, password, database)
@@ -79,10 +80,10 @@ if data_source == 'Base de données':
 
                 # Requêtes de volumétrie adaptées en fonction du type de base de données
                 if db_type in ['MySQL', 'PostgreSQL']:
-                    cursor.execute(""" 
+                    cursor.execute("""
                         SELECT table_name, 
-                               ROUND((data_length + index_length) / 1024 / 1024, 2) AS size_in_MB 
-                        FROM information_schema.tables 
+                               ROUND((data_length + index_length) / 1024 / 1024, 2) AS size_in_MB
+                        FROM information_schema.tables
                         WHERE table_schema = %s;
                     """, (database,))
                     results = cursor.fetchall()
@@ -103,7 +104,7 @@ if data_source == 'Base de données':
                 elif db_type == 'Oracle':
                     cursor.execute("""
                         SELECT table_name, 
-                               ROUND(SUM(bytes) / 1024 / 1024, 2) AS size_in_MB 
+                               ROUND(SUM(bytes) / 1024 / 1024, 2) AS size_in_MB
                         FROM user_segments
                         GROUP BY table_name;
                     """)
@@ -116,8 +117,7 @@ if data_source == 'Base de données':
                         SELECT table_name, 
                                SUM(reserved_page_count) * 8 / 1024 AS size_in_MB
                         FROM sys.dm_db_partition_stats
-                        JOIN information_schema.tables 
-                        ON sys.dm_db_partition_stats.object_id = object_id(tables.table_name)
+                        JOIN information_schema.tables ON sys.dm_db_partition_stats.object_id = object_id(tables.table_name)
                         GROUP BY table_name;
                     """)
                     results = cursor.fetchall()
@@ -129,7 +129,7 @@ if data_source == 'Base de données':
                 if db_type in ['MySQL', 'PostgreSQL']:
                     cursor.execute("""
                         SELECT ROUND(SUM(data_length + index_length) / 1024 / 1024, 2) AS total_size_in_MB
-                        FROM information_schema.tables 
+                        FROM information_schema.tables
                         WHERE table_schema = %s;
                     """, (database,))
                 elif db_type == 'SQLite':
@@ -158,8 +158,7 @@ if data_source == 'Base de données':
 
 elif data_source == 'Fichier':
     # Entrée de fichier
-    st.subheader("Télécharger un Fichier")
     uploaded_file = st.file_uploader("Téléchargez un fichier CSV ou Excel", type=["csv", "xlsx"])
 
     if uploaded_file is not None:
-        process_large_file(uploaded_file)  # Appeler la fonction pour traiter les fichiers volumineux
+        df = process_file(uploaded_file)
