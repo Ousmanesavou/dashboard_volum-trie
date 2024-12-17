@@ -53,7 +53,7 @@ def process_large_file(uploaded_file, chunk_size=100000):
         return None
 
 # Si vous voulez définir une taille spécifique pour l'image (par exemple 200px de largeur)
-st.sidebar.image(r"C:\Users\hp\Desktop\Stage_orange\my_dashboard\logo_orange.png", width=200)
+st.sidebar.image("assets/logo_orange.png", width=200)
 
 # Interface utilisateur pour saisir les informations de la base de données
 st.title("Dashboard de Volumétrie des Bases de Données")
